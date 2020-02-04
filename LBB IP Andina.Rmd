@@ -1,0 +1,112 @@
+---
+title: "LBB Jupiter Dinnah"
+author: "Andina Septia"
+date: "2/2/2020"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: scroll
+    theme: cosmo
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(tidyverse)
+library(plotly)
+library(glue)
+```
+
+```{r, echo=FALSE}
+youtubetrends <- read_csv("youtubetrends.csv")
+str(youtubetrends)
+colSums(is.na(youtubetrends))
+youtubetrends
+```
+
+
+```{r, echo=FALSE}
+youtube_clean <- youtubetrends[,-c(10, 11, 12)]
+youtube_clean
+```
+
+Video Dengan Rata-rata Views Berdasarkan Kategori
+
+```{r, echo=FALSE}
+vids_views <- youtube_clean %>%
+  # filter(publish_wday == "Sunday") %>% 
+  select(category_id, views) %>% 
+  group_by(category_id) %>% 
+  summarise(mean_views = round(mean(views),2))
+```
+
+
+```{r, echo=FALSE}
+vids_engage <- youtube_clean %>% 
+  select(category_id, likes, views, publish_wday)
+```
+
+```{r, echo=FALSE}
+ordered_day = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+```
+
+
+```{r, echo=FALSE}
+vids_engaged2 <- youtube_clean %>% 
+  mutate(engagement = likes+comment_count) %>% 
+  select(publish_wday, category_id, engagement) %>% 
+  mutate(publish_wday = factor(publish_wday, ordered = T, ordered_day)) %>%
+  group_by(publish_wday)
+vids_engaged2
+```
+
+Column {data-width=500}
+-----------------------------------------------------------------------
+
+### Mean Views Each Video Category
+
+```{r}
+plot_view <- ggplot(vids_views, aes(x = reorder(category_id, mean_views),
+                       y = mean_views,
+                       text = glue("Kategori: {category_id} <br> Rerata Views: {mean_views}"))) +
+  geom_col(aes(fill = category_id)) +
+  labs(title = "Means Views by Category",
+       x = NULL,
+       y = NULL) +
+  coord_flip() +
+  theme_minimal() +
+  theme(legend.position = "none")
+ggplotly(plot_view, tooltip = "text")
+```
+
+Column {data-width=500 .tabset}
+-----------------------------------------------------------------------
+
+### Likes per Views 
+
+```{r}
+plot_likeview <- ggplot(vids_engage, aes(x = likes, y = views,
+                                         text = glue("Category: {category_id} <br>Day Upload: {publish_wday} <br>Likes: {likes} <br>Views: {views}"))) +
+  geom_point(aes(color = category_id)) +
+  labs(title = "Likes per Views",
+       x = NULL,
+       y = NULL) +
+  theme_minimal() +
+  theme(legend.position = "none")
+plot_likeview
+ggplotly(plot_likeview, tooltip = "text")
+```
+
+### Video Engagement on Publish Day
+
+```{r}
+plot_engage <- ggplot(vids_engaged2, aes(x = publish_wday, y = engagement,
+                                         text = glue("Category: {category_id} <br>Engagement: {engagement}"))) +
+  geom_jitter(aes(color = category_id)) +
+  labs(title = "Engagement by Publish Day",
+       x = NULL,
+       y = NULL) +
+  theme_minimal() +
+  theme(legend.position = "none")
+ggplotly(plot_engage, tooltip = "text")
+```
+
